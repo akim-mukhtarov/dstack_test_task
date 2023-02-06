@@ -1,8 +1,6 @@
-FROM ubuntu:22.04
+FROM python:3.9
 
-LABEL version="0.0.0"
+COPY {{ bash_script }} /tmp/test_script.sh
+RUN chmod +x /tmp/test_script.sh
 
-ENV AWS_ACCESS_KEY_ID={{ aws_access_key_id }}
-ENV AWS_SECRET_ACCESS_KEY={{ aws_secret_access_key }}
-
-CMD [ "{{ bash_command }}" ]
+CMD [ "/tmp/test_script.sh" ]
