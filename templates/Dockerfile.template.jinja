@@ -1,0 +1,8 @@
+FROM ubuntu:22.04
+
+LABEL version="0.0.0"
+
+ENV AWS_ACCESS_KEY_ID={{ aws_access_key_id }}
+ENV AWS_SECRET_ACCESS_KEY={{ aws_secret_access_key }}
+
+CMD [ "{{ bash_command }}" ]
