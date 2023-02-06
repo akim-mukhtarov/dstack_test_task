@@ -20,15 +20,16 @@ def get_args():
     return parser.parse_args()
 
 
-def create_shell_script(content: str):
+def create_shell_script(content: str) -> str:
+    """Create shell sript with specified content."""
     script_name = "tmp.sh"
     with open(script_name, 'w') as bash_script:
         bash_script.write("#!/bin/bash\n")
-        bash_script.write(bash_command)
+        bash_script.write(content)
     return script_name
 
 
-def create_python_dockerfile(bash_command: str) -> None
+def create_python_dockerfile(bash_command: str) -> None:
     """Create Dockerfile from Jinja template."""
     env = Environment(loader=FileSystemLoader('templates/'),
                       autoescape=select_autoescape())
@@ -57,17 +58,21 @@ def setup_aws_creds(aws_access_key_id: str,
                     aws_secret_access_key: str) -> None:
     """Add AWS credentials to Docker server settings."""
     # Make setup script executable
-    script = os.path.join(__file__, "setup_creds.sh")
+    dirname = os.path.dirname(os.path.abspath(__file__))
+    script = os.path.join(dirname, "setup_creds.sh")
+    print(f"Script name: {script}")
     st = os.stat(script)
     os.chmod(script, st.st_mode | stat.S_IEXEC)
     # Execute script
-    cmd = [script, aws_access_key_id, aws_secret_access_key]
+    cmd = f"{script} {aws_access_key_id} {aws_secret_access_key}"
     subprocess.run(cmd, shell=True, check=True)
 
 
 def docker_image_exists(image_name: str) -> bool:
-    """Check whether docker image with specified name exists"""
-    pass
+    """Check whether docker image with specified name exists."""
+    cmd = f"docker inspect --type=image {image_name}"
+    result = subprocess.run(cmd, shell=True)
+    return result.returncode == 0
 
 
 def run_container(image_name: str,
@@ -86,8 +91,9 @@ def run_container(image_name: str,
         create_docker_image(image_name, bash_command)
     # add AWS credentials to Docker server settings
     setup_aws_creds(aws_access_key_id, aws_secret_access_key)
-    # now run container from created process with AWS redirection...
-    cmd = (f"sudo docker run --name {time.time()}-{image_name}-container "
+    timestamp = int(time.time())
+    container_name = f"{image_name}-container-{timestamp}"
+    cmd = (f"sudo docker run --name {container_name} "
            f"--log-driver=awslogs "
            f"--log-opt awslogs-region={aws_region} "
            f"--log-opt awslogs-group={aws_cloudwatch_group} "
@@ -113,3 +119,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
