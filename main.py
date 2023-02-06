@@ -1,4 +1,7 @@
 """Redirect container logs to AWS Cloudwatch."""
+import os
+import stat
+import time
 import argparse
 import subprocess
 import typing as t
@@ -17,34 +20,49 @@ def get_args():
     return parser.parse_args()
 
 
-def create_python_dockerfile(bash_command: str,
-                             aws_access_key_id: str,
-                             aws_secret_access_key: str) -> None:
+def create_shell_script(content: str):
+    script_name = "tmp.sh"
+    with open(script_name, 'w') as bash_script:
+        bash_script.write("#!/bin/bash\n")
+        bash_script.write(bash_command)
+    return script_name
+
+
+def create_python_dockerfile(bash_command: str) -> None
     """Create Dockerfile from Jinja template."""
     env = Environment(loader=FileSystemLoader('templates/'),
                       autoescape=select_autoescape())
     template = env.get_template("Dockerfile.template.jinja")
-    stream = template.stream(bash_command=bash_command,
-                             aws_access_key_id=aws_access_key_id,
-                             aws_secret_access_key=aws_secret_access_key)
+    # Write command to a file so we don't care about proper
+    # escaping of multiline commands in Dockerfile
+    script_name = create_shell_script(content=bash_command)
+    stream = template.stream(bash_script=script_name)
     stream.dump('Dockerfile')
 
 
 def create_docker_image(image_name: str,
-                        bash_command: str,
-                        aws_access_key_id: str,
-                        aws_secret_access_key: str) -> t.Tuple[bytes, bytes, int]:
-    create_python_dockerfile(bash_command,
-                             aws_access_key_id,
-                             aws_secret_access_key)
+                        bash_command: str) -> t.Tuple[bytes, bytes, int]:
+    create_python_dockerfile(bash_command)
     # Build and wait for finish
     cmd = f"sudo docker build -t {image_name} ."
-    result = subprocess.run(cmd, shell=True, check=True, capture_output=True)
+    result = subprocess.run(cmd, shell=True, check=True)
     # TODO: Consider logging here
     print(result.stdout)
     print(f"Build finished with exit code: {result.returncode}")
     #
     return result.stdout, result.stderr, result.returncode
+
+
+def setup_aws_creds(aws_access_key_id: str,
+                    aws_secret_access_key: str) -> None:
+    """Add AWS credentials to Docker server settings."""
+    # Make setup script executable
+    script = os.path.join(__file__, "setup_creds.sh")
+    st = os.stat(script)
+    os.chmod(script, st.st_mode | stat.S_IEXEC)
+    # Execute script
+    cmd = [script, aws_access_key_id, aws_secret_access_key]
+    subprocess.run(cmd, shell=True, check=True)
 
 
 def docker_image_exists(image_name: str) -> bool:
@@ -59,26 +77,33 @@ def run_container(image_name: str,
                   aws_cloudwatch_stream: str,
                   aws_access_key_id: str,
                   aws_secret_access_key: str) -> None:
-    """Run bash command in a docker container from image name. Will be created if doesn't exist."""
+    """
+    Run command in a new docker container, redirecting
+    logs to AWS Cloudwatch.
+    Container image will be created if doesn't exist.
+    """
     if not docker_image_exists(image_name):
-        create_docker_image(image_name, bash_command,
-                            aws_access_key, aws_secret_access_key)
+        create_docker_image(image_name, bash_command)
+    # add AWS credentials to Docker server settings
+    setup_aws_creds(aws_access_key_id, aws_secret_access_key)
     # now run container from created process with AWS redirection...
-    cmd = (f"sudo docker run --name {image_name}-container -d {image_name} "
+    cmd = (f"sudo docker run --name {time.time()}-{image_name}-container "
            f"--log-driver=awslogs "
            f"--log-opt awslogs-region={aws_region} "
            f"--log-opt awslogs-group={aws_cloudwatch_group} "
            f"--log-opt awslogs-stream={aws_cloudwatch_stream} "
-           f"--log-opt awslogs-create-group=true ")
-    result = subprocess.run(cmd, shell=True, check=True, capture_output=True)
+           f"--log-opt awslogs-create-group=true "
+           f"-d {image_name}")
+    result = subprocess.run(cmd, shell=True, check=True)
     #
     print(result.stdout)
+    print(result.stderr)
     print(f"Finished with exit code: {result.returncode}")
 
 
 def main():
     args = get_args()
-    run_container(args.image_name, args.bash_command,
+    run_container(args.docker_image, args.bash_command,
                   args.aws_region,
                   args.aws_cloudwatch_group,
                   args.aws_cloudwatch_stream,
