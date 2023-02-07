@@ -60,10 +60,16 @@ def create_docker_image(image_name: str,
     cmd = f"sudo docker build -t {image_name} ."
     result = subprocess.run(cmd, stdout=PIPE, stderr=PIPE,
                             shell=True, check=True)
+
+    stdout = result.stdout.decode('utf-8')
     logger.info('[stdout]')
-    logger.info(result.stdout.decode('utf-8'))
-    logger.info('[stderr]')
-    logger.info(result.stderr.decode('utf-8'))
+    logger.info(stdout)
+
+    stderr = result.stderr.decode('utf-8')
+    if len(stderr):
+        logger.info('[stderr]')
+        logger.info(stderr)
+
     logger.info(f"Build finished with exit code: {result.returncode}")
 
 
@@ -117,13 +123,20 @@ def run_container(image_name: str,
            f"--log-opt awslogs-stream={aws_cloudwatch_stream} "
            f"--log-opt awslogs-create-group=true "
            f"-d {image_name}")
+
+    logger.info("Run in a new container")
     result = subprocess.run(cmd, stdout=PIPE, stderr=PIPE,
                             shell=True, check=True)
 
+    stdout = result.stdout.decode('utf-8')
     logger.info('[stdout]')
-    logger.info(result.stdout.decode('utf-8'))
-    logger.info('[stderr]')
-    logger.info(result.stderr.decode('utf-8'))
+    logger.info(stdout)
+
+    stderr = result.stderr.decode('utf-8')
+    if len(stderr):
+        logger.info('[stderr]')
+        logger.info(stderr)
+
     logger.info(f"Finished with exit code: {result.returncode}")
     return container_name
 
@@ -177,6 +190,8 @@ def main():
     signal.signal(signal.SIGTERM, sigterm_handler)
     # Wait for signals to exit
     logger = logging.getLogger(__file__)
+    logger.info("Container is running. The logs should be in Cloudwatch "
+                "Console in a few minutes.")
     logger.info("Press CTRL+C to stop container and exit")
 
     while True:
