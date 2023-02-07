@@ -1,11 +1,14 @@
 """Redirect container logs to AWS Cloudwatch."""
 import os
+import sys
 import stat
+import signal
 import time
 import logging
 import argparse
 import subprocess
 import typing as t
+from functools import partial
 from subprocess import PIPE, DEVNULL
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -120,14 +123,59 @@ def run_container(image_name: str,
     logger.info(f"Finished with exit code: {result.returncode}")
 
 
+def stop_container(container_name: str) -> int:
+    """Stop docker container using docker CLI, return exit code."""
+    cmd = f"sudo docker stop {container_name}"
+    result = subprocess.run(cmd, shell=True, check=False)
+    return result.returncode
+
+
+def handle_sigint(signum, frame, container_name: str):
+    """
+    Handle SIGINT (also KeyboardInterrupt): shutdown container and exit.
+    """
+    logger = logging.getLogger(__file__)
+    logger.info("Got SIGINT")
+    logger.info("Stop container...")
+    rc = stop_container(container_name)
+    logger.info(f"Finished with exit code {rc}")
+    logger.info("Exit gracefully")
+    sys.exit(0)
+
+
+def handle_sigterm(signum, frame, container_name: str):
+    """
+    Handle SIGTERM: shutdown container and exit.
+    """
+    logger = logging.getLogger(__file__)
+    logger.info("Got SIGTERM")
+    logger.info("Stop container...")
+    rc = stop_container(container_name)
+    logger.info(f"Finished with exit code {rc}")
+    logger.info("Exit gracefully")
+    sys.exit(0)
+
+
 def main():
     args = get_args()
-    run_container(args.docker_image, args.bash_command,
-                  args.aws_region,
-                  args.aws_cloudwatch_group,
-                  args.aws_cloudwatch_stream,
-                  args.aws_access_key_id,
-                  args.aws_secret_access_key)
+    container_name = run_container(args.docker_image,
+                                   args.bash_command,
+                                   args.aws_region,
+                                   args.aws_cloudwatch_group,
+                                   args.aws_cloudwatch_stream,
+                                   args.aws_access_key_id,
+                                   args.aws_secret_access_key)
+    # Set signal handlers
+    sigint_handler = partial(handle_sigint, container_name=container_name)
+    sigterm_handler = partial(handle_sigterm, container_name=container_name)
+    signal.signal(signal.SIGINT, sigint_handler)
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    # Wait for signals to exit
+    logger = logging.getLogger(__file__)
+    logger.info("Press CTRL+C to stop container and exit")
+
+    while True:
+        time.sleep(1)
 
 
 if __name__ == '__main__':
