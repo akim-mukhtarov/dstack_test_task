@@ -1,6 +1,6 @@
 # Tmp files
-Dockerfile
-tmp.sh
+dstack_test_task/Dockerfile
+dstack_test_task/tmp.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
