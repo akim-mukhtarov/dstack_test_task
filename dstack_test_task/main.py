@@ -94,14 +94,18 @@ def run_container(image_name: str,
                   aws_cloudwatch_group: str,
                   aws_cloudwatch_stream: str,
                   aws_access_key_id: str,
-                  aws_secret_access_key: str) -> None:
+                  aws_secret_access_key: str) -> str:
     """
     Run command in a new docker container, redirecting
     logs to AWS Cloudwatch.
     Container image will be created if doesn't exist.
     """
+    logger = logging.getLogger(__file__)
+
     if not docker_image_exists(image_name):
         create_docker_image(image_name, bash_command)
+    else:
+        logger.info(f"Image {image_name} already exists.")
     # add AWS credentials to Docker server settings
     setup_aws_creds(aws_access_key_id, aws_secret_access_key)
     timestamp = int(time.time())
@@ -115,12 +119,13 @@ def run_container(image_name: str,
            f"-d {image_name}")
     result = subprocess.run(cmd, stdout=PIPE, stderr=PIPE,
                             shell=True, check=True)
-    logger = logging.getLogger(__file__)
+
     logger.info('[stdout]')
     logger.info(result.stdout.decode('utf-8'))
     logger.info('[stderr]')
     logger.info(result.stderr.decode('utf-8'))
     logger.info(f"Finished with exit code: {result.returncode}")
+    return container_name
 
 
 def stop_container(container_name: str) -> int:
