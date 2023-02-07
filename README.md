@@ -53,3 +53,4 @@ AWS CloudWatch group or stream does not exist, it creates it using the given
 AWS credentials.
 - The program behaves properly regardless of how much or what kind of logs the
 container outputs.
+- The profram handles SIGINT and SIGTERM
