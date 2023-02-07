@@ -3,7 +3,7 @@ Python program that redirects output logs of a container to AWS Cloudwatch.
 This solution utilizes Docker builtin AWS logs driver, `awslogs`.
 
 ## Prerequisites
-- Python >= 3.7
+- Python >= 3.6.9
 - Docker Engine 20.02
 - AWS credentials with Cloudwatch Agent permissions
 - Sudo privileges
@@ -39,6 +39,7 @@ python3 -m venv venv
 source venv/bin/activate
 python3 -m pip install -r requirements.txt
 # test.sh will run the programm with sample script and image name
+cd dtask_test_task
 sudo chmod +x test.sh && ./test.sh
 ```
 
