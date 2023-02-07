@@ -51,13 +51,16 @@ def create_python_dockerfile(bash_command: str) -> None:
 def create_docker_image(image_name: str,
                         bash_command: str) -> None:
     create_python_dockerfile(bash_command)
+    logger.info("Start building...")
     # Build and wait for finish
     cmd = f"sudo docker build -t {image_name} ."
     result = subprocess.run(cmd, stdout=PIPE, stderr=PIPE,
                             shell=True, check=True)
     logger = logging.getLogger(__file__)
-    logger.info(result.stdout)
-    logger.info(result.stderr)
+    logger.info('[stdout]')
+    logger.info(result.stdout.decode('utf-8'))
+    logger.info('[stderr]')
+    logger.info(result.stderr.decode('utf-8'))
     logger.info(f"Build finished with exit code: {result.returncode}")
 
 
@@ -67,7 +70,6 @@ def setup_aws_creds(aws_access_key_id: str,
     # Make setup script executable
     dirname = os.path.dirname(os.path.abspath(__file__))
     script = os.path.join(dirname, "setup_creds.sh")
-    print(f"Script name: {script}")
     st = os.stat(script)
     os.chmod(script, st.st_mode | stat.S_IEXEC)
     # Execute script
@@ -111,8 +113,10 @@ def run_container(image_name: str,
     result = subprocess.run(cmd, stdout=PIPE, stderr=PIPE,
                             shell=True, check=True)
     logger = logging.getLogger(__file__)
-    logger.info(result.stdout)
-    logger.info(result.stderr)
+    logger.info('[stdout]')
+    logger.info(result.stdout.decode('utf-8'))
+    logger.info('[stderr]')
+    logger.info(result.stderr.decode('utf-8'))
     logger.info(f"Finished with exit code: {result.returncode}")
 
 
