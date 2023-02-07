@@ -2,10 +2,17 @@
 import os
 import stat
 import time
+import logging
 import argparse
 import subprocess
 import typing as t
+from subprocess import PIPE, DEVNULL
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+
+logging.basicConfig()
+logger = logging.getLogger(__file__)
+logger.setLevel(logging.INFO)
 
 
 def get_args():
@@ -42,16 +49,16 @@ def create_python_dockerfile(bash_command: str) -> None:
 
 
 def create_docker_image(image_name: str,
-                        bash_command: str) -> t.Tuple[bytes, bytes, int]:
+                        bash_command: str) -> None:
     create_python_dockerfile(bash_command)
     # Build and wait for finish
     cmd = f"sudo docker build -t {image_name} ."
-    result = subprocess.run(cmd, shell=True, check=True)
-    # TODO: Consider logging here
-    print(result.stdout)
-    print(f"Build finished with exit code: {result.returncode}")
-    #
-    return result.stdout, result.stderr, result.returncode
+    result = subprocess.run(cmd, stdout=PIPE, stderr=PIPE,
+                            shell=True, check=True)
+    logger = logging.getLogger(__file__)
+    logger.info(result.stdout)
+    logger.info(result.stderr)
+    logger.info(f"Build finished with exit code: {result.returncode}")
 
 
 def setup_aws_creds(aws_access_key_id: str,
@@ -65,13 +72,14 @@ def setup_aws_creds(aws_access_key_id: str,
     os.chmod(script, st.st_mode | stat.S_IEXEC)
     # Execute script
     cmd = f"{script} {aws_access_key_id} {aws_secret_access_key}"
-    subprocess.run(cmd, shell=True, check=True)
+    subprocess.run(cmd, stdout=DEVNULL, stderr=DEVNULL,
+                   shell=True, check=True)
 
 
 def docker_image_exists(image_name: str) -> bool:
     """Check whether docker image with specified name exists."""
     cmd = f"docker inspect --type=image {image_name}"
-    result = subprocess.run(cmd, shell=True)
+    result = subprocess.run(cmd, stdout=DEVNULL, stderr=DEVNULL, shell=True)
     return result.returncode == 0
 
 
@@ -100,11 +108,12 @@ def run_container(image_name: str,
            f"--log-opt awslogs-stream={aws_cloudwatch_stream} "
            f"--log-opt awslogs-create-group=true "
            f"-d {image_name}")
-    result = subprocess.run(cmd, shell=True, check=True)
-    #
-    print(result.stdout)
-    print(result.stderr)
-    print(f"Finished with exit code: {result.returncode}")
+    result = subprocess.run(cmd, stdout=PIPE, stderr=PIPE,
+                            shell=True, check=True)
+    logger = logging.getLogger(__file__)
+    logger.info(result.stdout)
+    logger.info(result.stderr)
+    logger.info(f"Finished with exit code: {result.returncode}")
 
 
 def main():
