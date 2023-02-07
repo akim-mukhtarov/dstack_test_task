@@ -51,12 +51,12 @@ def create_python_dockerfile(bash_command: str) -> None:
 def create_docker_image(image_name: str,
                         bash_command: str) -> None:
     create_python_dockerfile(bash_command)
+    logger = logging.getLogger(__file__)
     logger.info("Start building...")
     # Build and wait for finish
     cmd = f"sudo docker build -t {image_name} ."
     result = subprocess.run(cmd, stdout=PIPE, stderr=PIPE,
                             shell=True, check=True)
-    logger = logging.getLogger(__file__)
     logger.info('[stdout]')
     logger.info(result.stdout.decode('utf-8'))
     logger.info('[stderr]')
