@@ -200,7 +200,7 @@ def run_in_container(image_name: str,
         setup_aws_creds(aws_access_key_id, aws_secret_access_key)
 
         timestamp = int(time.time())
-        container_name = f"{image-name}-container-{timestamp}"
+        container_name = f"{image_name}-container-{timestamp}"
         logger.info(f"Run in a new container {container_name}")
         cmd = (f"docker run --rm --name {container_name} "
                f"--log-driver=awslogs "
