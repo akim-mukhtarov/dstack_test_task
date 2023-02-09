@@ -202,7 +202,7 @@ def run_in_container(image_name: str,
         timestamp = int(time.time())
         container_name = f"{image-name}-container-{timestamp}"
         logger.info(f"Run in a new container {container_name}")
-        cmd = (f"docker run --name {container_name} "
+        cmd = (f"docker run --rm --name {container_name} "
                f"--log-driver=awslogs "
                f"--log-opt awslogs-region={aws_region} "
                f"--log-opt awslogs-group={aws_cloudwatch_group} "
