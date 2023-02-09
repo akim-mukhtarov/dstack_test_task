@@ -4,7 +4,7 @@ This solution utilizes Docker builtin AWS logs driver, `awslogs`.
 
 ## Prerequisites
 - Python >= 3.6.9
-- Docker Engine 20.02
+- Docker Engine 20.10
 - AWS credentials with Cloudwatch Agent permissions
 - Sudo privileges
 
@@ -40,13 +40,13 @@ source venv/bin/activate
 python3 -m pip install -r requirements.txt
 # test.sh will run the programm with sample script and image name
 cd dtask_test_task
-sudo chmod +x test.sh && ./test.sh
+sudo chmod +x test.sh && sudo ./test.sh
 ```
 
 ## Functionality
 - The program creates a Docker container using the given Docker image name, and
 the given bash command. If Docker container with specified image name already exists,
-it creates a new container using this image and ignores input command.
+it creates a new image using the given image as base layer, then runs container.
 - The program handles the output logs of the container and send them to the given
 AWS CloudWatch group/stream using the given AWS credentials. If the corresponding
 AWS CloudWatch group or stream does not exist, it creates it using the given

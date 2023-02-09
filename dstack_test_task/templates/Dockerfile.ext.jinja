@@ -1,0 +1,6 @@
+FROM {{ base_image }}
+
+COPY {{ bash_script }} /tmp/test_script.sh
+RUN chmod +x /tmp/test_script.sh
+
+CMD [ "/tmp/test_script.sh" ]
