@@ -31,6 +31,13 @@ def get_args():
     return parser.parse_args()
 
 
+def remove_image(image_name: str) -> int:
+    """Remove docker image using docker CLI, return exit code."""
+    cmd = f"docker rmi {image_name}"
+    result = subprocess.run(cmd, shell=True, check=False)
+    return result.returncode
+
+
 def stop_container(container_name: str) -> int:
     """Stop docker container using docker CLI, return exit code."""
     cmd = f"docker stop {container_name}"
@@ -38,34 +45,56 @@ def stop_container(container_name: str) -> int:
     return result.returncode
 
 
-def handle_sigint(signum, frame, container_name: str, dockerfile_path: str):
+def handle_sigint(signum,
+                  frame,
+                  container_name: str,
+                  image_name: str,
+                  dockerfile_path: str):
     """
     Handle SIGINT (also KeyboardInterrupt): shutdown container and exit.
     """
     logger = logging.getLogger(__file__)
     logger.info("Got SIGINT")
+
     logger.info("Stop container...")
     rc = stop_container(container_name)
     logger.info(f"Finished with exit code {rc}")
+
+    logger.info("Remove image...")
+    rc = remove_image(image_name)
+    logger.info(f"Finished with exit code {rc}")
+
     logger.info("Remove dockerfile...")
     os.remove(dockerfile_path)
     logger.info("Done")
+
     logger.info("Exit gracefully")
     sys.exit(0)
 
 
-def handle_sigterm(signum, frame, container_name: str, dockerfile_path: str):
+def handle_sigterm(signum,
+                   frame,
+                   container_name: str,
+                   image_name: str,
+                   dockerfile_path: str):
     """
     Handle SIGTERM: shutdown container and exit.
     """
     logger = logging.getLogger(__file__)
-    logger.info("Got SIGTERM")
+    logger.info("Got SIGINT")
+
     logger.info("Stop container...")
     rc = stop_container(container_name)
     logger.info(f"Finished with exit code {rc}")
-    logger.info("Remove dockerfile {dockerfile_path}...")
+
+    logger.info("Remove image...")
+    rc = remove_image(image_name)
+    logger.info(f"Finished with exit code {rc}")
+
+    logger.info("Remove dockerfile...")
     os.remove(dockerfile_path)
     logger.info("Done")
+
     logger.info("Exit gracefully")
     sys.exit(0)
 
@@ -181,7 +210,7 @@ def run_in_container(image_name: str,
                      aws_cloudwatch_group: str,
                      aws_cloudwatch_stream: str,
                      aws_access_key_id: str,
-                     aws_secret_access_key) -> t.Tuple[str, str]:
+                     aws_secret_access_key) -> t.Tuple[str, str, str]:
     """
     Run command in a new docker container, redirecting
     logs to AWS Cloudwatch.
@@ -223,25 +252,29 @@ def run_in_container(image_name: str,
             logger.info(stderr)
 
         logger.info(f"Finished with exit code: {result.returncode}")
-        return container_name, dockerfile
+        return container_name, image_name, dockerfile
 
 
 def main():
     args = get_args()
-    container_name, dockerfile_path = run_in_container(args.docker_image,
-                                                       args.bash_command,
-                                                       args.aws_region,
-                                                       args.aws_cloudwatch_group,
-                                                       args.aws_cloudwatch_stream,
-                                                       args.aws_access_key_id,
-                                                       args.aws_secret_access_key)
+    result = run_in_container(args.docker_image,
+                              args.bash_command,
+                              args.aws_region,
+                              args.aws_cloudwatch_group,
+                              args.aws_cloudwatch_stream,
+                              args.aws_access_key_id,
+                              args.aws_secret_access_key)
+
+    container_name, image_name, dockerfile_path = result
     # Set signal handlers
     sigint_handler = partial(handle_sigint,
                              container_name=container_name,
+                             image_name=image_name,
                              dockerfile_path=dockerfile_path)
 
     sigterm_handler = partial(handle_sigterm,
                               container_name=container_name,
+                              image_name=image_name,
                               dockerfile_path=dockerfile_path)
 
     signal.signal(signal.SIGINT, sigint_handler)
