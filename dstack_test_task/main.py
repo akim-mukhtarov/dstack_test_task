@@ -152,19 +152,18 @@ def docker_image_exists(image_name: str) -> bool:
 
 
 @contextmanager
-def tmp_script_file(directory, content):
-    # Create tmp script in dir with content, yield path
-    #
+def tmp_script_file(directory: str, content: str):
+    """Create tmp script in `directory` with `content`, yield path."""
     logger = logging.getLogger(__file__)
     logger.info('Creating tmp script file...')
-    #
+
     timestamp = int(time.time())
     script_name = f"tmp_script_{timestamp}"
     script_path = os.path.join(directory, script_name)
-    #
+
     logger.info(f"Script name: {script_name}")
     logger.info(f"Script path: {script_path}")
-    #
+    # Create dir if doesn't extis
     os.makedirs(os.path.dirname(script_path), exist_ok=True)
     with open(script_path, 'w') as file:
         file.write('#!/bin/bash\n')    # write shebang
@@ -172,9 +171,7 @@ def tmp_script_file(directory, content):
     try:
         yield script_path
     finally:
-        #
         logger.info('Remove tmp script file...')
-        #
         os.remove(script_path)
 
 
@@ -188,23 +185,23 @@ def run_in_container(image_name: str,
     """
     Run command in a new docker container, redirecting
     logs to AWS Cloudwatch.
-    Container image will be created if doesn't exist.
+    If container image exists, new image will be created using
+    it as a base layer, otherwise a new default image will be used.
     """
     logger = logging.getLogger(__file__)
-    # dirname = os.path.dirname(os.path.abspath(__file__))
     dirname = 'tmp'
 
-    with tmp_script_file(dirname, bash_command) as script_path: # Copy & remove after run
+    with tmp_script_file(dirname, bash_command) as script_path:
         if not docker_image_exists(image_name):
             dockerfile = build_default_docker_image(image_name, script_path)
         else:
             dockerfile, image_name = build_extended_docker_image(image_name, script_path)
         # Setup AWS creds: consider better approach
         setup_aws_creds(aws_access_key_id, aws_secret_access_key)
-        #
-        logger.info("Run in a new container")
+
         timestamp = int(time.time())
-        container_name = f"{image_name}-container-{timestamp}"
+        container_name = f"{image-name}-container-{timestamp}"
+        logger.info(f"Run in a new container {container_name}")
         cmd = (f"docker run --name {container_name} "
                f"--log-driver=awslogs "
                f"--log-opt awslogs-region={aws_region} "
