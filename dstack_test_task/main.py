@@ -77,13 +77,6 @@ def setup_aws_creds(aws_access_key_id: str,
                    shell=True, check=True)
 
 
-def docker_image_exists(image_name: str) -> bool:
-    """Check whether docker image with specified name exists."""
-    cmd = f"docker inspect --type=image {image_name}"
-    result = subprocess.run(cmd, stdout=DEVNULL, stderr=DEVNULL, shell=True)
-    return result.returncode == 0
-
-
 def run_in_container(docker_image: str,
                      bash_command: str,
                      aws_region: str,
@@ -96,9 +89,6 @@ def run_in_container(docker_image: str,
     logs to AWS Cloudwatch.
     """
     logger = logging.getLogger(__file__)
-
-    if not docker_image_exists(docker_image):
-        raise Exception(f"Image {docker_image} does not exist")
     # Setup AWS creds: consider better approach
     setup_aws_creds(aws_access_key_id, aws_secret_access_key)
 
