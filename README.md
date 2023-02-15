@@ -25,28 +25,9 @@ True:\n\tprint(counter)\n\tcounter = counter + 1\n\ttime.sleep(0.1)\"'
 --aws-access-key-id ... --aws-secret-access-key ... --aws-region ...
 ```
 
-## How to run
-
-The following code demonstrates logs redirection of a sample command that
-runs dependecies installation, calls Python interpreter and starts counting in infinite loop.
-You should see the logs in a few minutes in Cloudwatch Console.
-```sh
-AWS_ACCESS_KEY_ID=<aws-access-key-id>
-AWS_SECRET_ACCESS_KEY=<aws-secret-access-key>
-AWS_REGION=<aws-region>
-# Python stuff
-python3 -m venv venv
-source venv/bin/activate
-python3 -m pip install -r requirements.txt
-# test.sh will run the programm with sample script and image name
-cd dtask_test_task
-sudo chmod +x test.sh && sudo ./test.sh
-```
-
 ## Functionality
 - The program creates a Docker container using the given Docker image name, and
-the given bash command. If Docker container with specified image name already exists,
-it creates a new image using the given image as base layer, then runs container.
+the given bash command.
 - The program handles the output logs of the container and send them to the given
 AWS CloudWatch group/stream using the given AWS credentials. If the corresponding
 AWS CloudWatch group or stream does not exist, it creates it using the given
