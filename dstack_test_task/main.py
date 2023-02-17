@@ -30,34 +30,34 @@ def get_args():
     return parser.parse_args()
 
 
-def stop_container(container_name: str) -> int:
+def stop_container(container_id: str) -> int:
     """Stop docker container using docker CLI, return exit code."""
-    cmd = f"docker stop {container_name}"
+    cmd = f"docker stop {container_id}"
     result = subprocess.run(cmd, shell=True, check=False)
     return result.returncode
 
 
-def handle_sigint(signum, frame, container_name: str):
+def handle_sigint(signum, frame, container_id: str):
     """
     Handle SIGINT (also KeyboardInterrupt): shutdown container and exit.
     """
     logger = logging.getLogger(__file__)
     logger.info("Got SIGINT")
     logger.info("Stop container...")
-    rc = stop_container(container_name)
+    rc = stop_container(container_id)
     logger.info(f"Finished with exit code {rc}")
     logger.info("Exit gracefully")
     sys.exit(0)
 
 
-def handle_sigterm(signum, frame, container_name: str):
+def handle_sigterm(signum, frame, container_id: str):
     """
     Handle SIGTERM: shutdown container and exit.
     """
     logger = logging.getLogger(__file__)
     logger.info("Got SIGINT")
     logger.info("Stop container...")
-    rc = stop_container(container_name)
+    rc = stop_container(container_id)
     logger.info(f"Finished with exit code {rc}")
     logger.info("Exit gracefully")
     sys.exit(0)
@@ -115,22 +115,22 @@ def run_in_container(docker_image: str,
         logger.info(stderr)
 
     logger.info(f"Finished with exit code: {result.returncode}")
-    container_name = stdout.strip()
-    return container_name
+    container_id = stdout.strip()
+    return container_id
 
 
 def main():
     args = get_args()
-    container_name = run_in_container(args.docker_image,
-                                      args.bash_command,
-                                      args.aws_region,
-                                      args.aws_cloudwatch_group,
-                                      args.aws_cloudwatch_stream,
-                                      args.aws_access_key_id,
-                                      args.aws_secret_access_key)
+    container_id = run_in_container(args.docker_image,
+                                    args.bash_command,
+                                    args.aws_region,
+                                    args.aws_cloudwatch_group,
+                                    args.aws_cloudwatch_stream,
+                                    args.aws_access_key_id,
+                                    args.aws_secret_access_key)
     # Set signal handlers
-    sigint_handler = partial(handle_sigint, container_name=container_name)
-    sigterm_handler = partial(handle_sigterm, container_name=container_name)
+    sigint_handler = partial(handle_sigint, container_id=container_id)
+    sigterm_handler = partial(handle_sigterm, container_id=container_id)
     signal.signal(signal.SIGINT, sigint_handler)
     signal.signal(signal.SIGTERM, sigterm_handler)
     # Wait for signals to exit
