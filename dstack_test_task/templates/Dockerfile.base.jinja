@@ -1,6 +1,0 @@
-FROM python:3.9
-
-COPY {{ bash_script }} /tmp/test_script.sh
-RUN chmod +x /tmp/test_script.sh
-
-CMD [ "/tmp/test_script.sh" ]
